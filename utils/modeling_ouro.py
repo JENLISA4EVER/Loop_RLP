@@ -28,10 +28,9 @@ from transformers.modeling_utils import ALL_ATTENTION_FUNCTIONS, PreTrainedModel
 from transformers.processing_utils import Unpack
 from transformers.utils import TransformersKwargs, auto_docstring, can_return_tuple
 from transformers.utils.generic import check_model_inputs
-from configuration_ouro import OuroConfig
-from dataclasses import dataclass  # 【新增】
-from utils import add_noise_function # 【新增】
-import os
+from .configuration_ouro import OuroConfig
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -588,12 +587,8 @@ class OuroModel(OuroPreTrainedModel):
         # create position embeddings to be shared across the decoder layers
         position_embeddings = self.rotary_emb(hidden_states, position_ids)
         hidden_states_list = []
-        add_noise_list = []
         gate_list = []
-        # 【THREEGOLD新增】添加噪声
-        add_noise = kwargs.get("add_noise", False)
-        add_noise_std = kwargs.get("add_noise_std", 0.1)
-        add_noise_mask = kwargs.get("add_noise_mask", None) #XXX:待考虑
+
         for current_ut in range(self.total_ut_steps):
             for decoder_layer in self.layers[: self.config.num_hidden_layers]:
                 hidden_states = decoder_layer(
@@ -609,11 +604,6 @@ class OuroModel(OuroPreTrainedModel):
                 )
 
             hidden_states = self.norm(hidden_states)
-            if add_noise:
-                if os.environ.get("RANK",-1) == 0:
-                    logger.info(f"Adding noise to hidden states at step {current_ut}")
-                hidden_states, noise = add_noise_function(hidden_states, std=add_noise_std, mask=add_noise_mask)
-                add_noise_list.append(noise)
             hidden_states_list.append(hidden_states)
             gate_list.append(self.early_exit_gate(hidden_states))
 
@@ -624,20 +614,9 @@ class OuroModel(OuroPreTrainedModel):
             ),
             hidden_states_list,
             gate_list,
-            add_noise_list,
         )
 
 
-@dataclass
-class OuroRLPOutput(CausalLMOutputWithPast):
-    """
-    Output type for OuroRLP, adding hidden_states_list and gate_list for RLP training.
-    """
-
-    hidden_states_list: Optional[tuple[torch.Tensor]] = None
-    gate_list: Optional[tuple[torch.Tensor]] = None
-    add_noise_list: Optional[tuple[torch.Tensor]] = None
-    exit_steps: Optional[torch.Tensor] = None
 @auto_docstring
 class OuroForCausalLM(OuroPreTrainedModel, GenerationMixin):
     _tied_weights_keys = ["lm_head.weight"]
@@ -714,7 +693,7 @@ class OuroForCausalLM(OuroPreTrainedModel, GenerationMixin):
             exit_threshold if exit_threshold is not None else self.early_exit_threshold
         )
 
-        outputs, hidden_states_list, gate_list, add_noise_list = self.model(
+        outputs, hidden_states_list, gate_list = self.model(
             input_ids=input_ids,
             attention_mask=attention_mask,
             position_ids=position_ids,
@@ -741,7 +720,7 @@ class OuroForCausalLM(OuroPreTrainedModel, GenerationMixin):
 
         stacked_exit_pdf = None
         if gate_list:
-            pdf_list = []  # CHECK
+            pdf_list = []
             remaining_prob = torch.ones_like(gate_list[0].squeeze(-1))
             for idx, gate_tensor in enumerate(gate_list):
                 lambda_i = torch.sigmoid(gate_tensor.squeeze(-1))
@@ -779,7 +758,7 @@ class OuroForCausalLM(OuroPreTrainedModel, GenerationMixin):
 
         logits: Optional[torch.Tensor] = None
         loss: Optional[torch.Tensor] = None
-        exit_steps: Optional[torch.Tensor] = None
+
         if labels is not None:
             logits = compute_expected_logits()
             if logits is None:
@@ -826,20 +805,12 @@ class OuroForCausalLM(OuroPreTrainedModel, GenerationMixin):
                 hidden_states = outputs.last_hidden_state
                 logits = self.lm_head(_select_token_positions(hidden_states))
 
-        # 【修改】使用我们自定义的 OuroRLPOutput，它是合法的 dataclass
-        result = OuroRLPOutput(
-            loss=loss,  
+        result = CausalLMOutputWithPast(
+            loss=loss,
             logits=logits,
             past_key_values=outputs.past_key_values,
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
-            # 【新增】直接在构造函数里传入，这是合法的
-            hidden_states_list=(
-                tuple(hidden_states_list) if hidden_states_list else None
-            ),
-            gate_list=tuple(gate_list) if gate_list else None,
-            add_noise_list=tuple(add_noise_list) if add_noise_list else None,
-            exit_steps=exit_steps,
         )
 
         return result
