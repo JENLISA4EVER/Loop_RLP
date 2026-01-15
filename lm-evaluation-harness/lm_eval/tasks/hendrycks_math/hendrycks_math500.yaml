@@ -1,0 +1,6 @@
+include: hendrycks_math_algebra.yaml
+task: hendrycks_math500
+dataset_name: default
+dataset_path: /share/home/sxjiang/myproject/self-learn/datasets/math-500
+training_split: null
+test_split: test
