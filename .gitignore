@@ -9,6 +9,7 @@ re.md
 *.sh
 **/.vscode/**
 **/wandb/**
+**/ssh/**
 *.json
 **/*.jsonl
 **/*.out
