@@ -1,5 +1,6 @@
 #### Prepare
 ##### Train
+```shell
 conda create -n ouro python==3.10
 pip install -r requirement.txt
 pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu126
@@ -7,12 +8,14 @@ pip install deepspeed
 pip install hydra-core --upgrade
 wget https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.4.post1/flash_attn-2.7.4.post1+cu12torch2.6cxx11abiTRUE-cp310-cp310-linux_x86_64.whl
 pip install flash_attn-2.7.4.post1+cu12torch2.6cxx11abiTRUE-cp310-cp310-linux_x86_64.whl
+```
 ##### Evaluate
+```
 cd lm-evaluation-harness
 pip install -e .
 cd evalplus
 pip install -e .
-
+```
 #### 文件夹说明
 - train/:
     - rlp_trainer.py:包含trainer的定义
