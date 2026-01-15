@@ -1,0 +1,15 @@
+re.md
+*.ipynb
+**/__pycache__/**
+**/checkpoints/**
+**/datasets/**
+**/logs/**
+**/results/**
+**/.vscode/**
+*.sh
+**/.vscode/**
+**/wandb/**
+*.json
+**/*.jsonl
+**/*.out
+*.csv

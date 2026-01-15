@@ -1,0 +1,30 @@
+# --- hydra output config ---
+hydra:
+  run:
+    dir: ${output_dir}/logs/
+  output_subdir: ${now:%Y-%m-%d_%H-%M-%S}_config
+  job_logging:
+    level: INFO
+    handlers:
+      file:
+        filename: ${hydra.run.dir}/eval_${now:%Y-%m-%d_%H-%M-%S}.log
+
+base_model_path: /share/home/sxjiang/model/Ouro-1.4B
+rlp_model_path: /share/home/sxjiang/myproject/self-learn/checkpoints/ouro_rlp_checkpoints_bf16/epoch_0
+easy_data_path: /share/home/sxjiang/myproject/self-learn/datasets/processed/omni_math/entropy_split_topk_difficulty_len_2048/test_ntp_difficulty_split_easy.jsonl
+medium_data_path: /share/home/sxjiang/myproject/self-learn/datasets/processed/omni_math/entropy_split_topk_difficulty_len_2048/test_ntp_difficulty_split_medium.jsonl
+hard_data_path: /share/home/sxjiang/myproject/self-learn/datasets/processed/omni_math/entropy_split_topk_difficulty_len_2048/test_ntp_difficulty_split_hard.jsonl
+output_dir: /share/home/sxjiang/myproject/self-learn/results/ouro_rlp_checkpoints_bf16_debug_v1
+device: cuda
+max_seq_len: 3000 #因为有额外的前缀
+total_ut_steps: 4
+exit_threshold: 0.5
+entropy_thresholds:
+  Easy: 0.5
+  Medium: 1.0
+  Hard: 1.5
+samples_per_category: 300
+batch_size: 16
+resume: true
+entropy_hidden_state_index: -1
+apply_chat: true

@@ -1,0 +1,72 @@
+# --- hydra output config ---
+hydra:
+  run:
+    dir: ${output_dir}/logs/
+  output_subdir: ${now:%Y-%m-%d_%H-%M-%S}_config
+  job_logging:
+    level: INFO
+    handlers:
+      file:
+        filename: ${hydra.run.dir}/main_${now:%Y-%m-%d_%H-%M-%S}.log
+# ==========================================
+# Configuration (全量微调版)
+# ==========================================
+# --- Training Configuration ---
+model_path: /share/home/sxjiang/model/Ouro-1.4B 
+experiment_name: ouro_rlp_checkpoints_bf16_debug_v1
+output_dir: /share/home/sxjiang/myproject/self-learn/checkpoints/${experiment_name}
+max_length: 20480
+batch_size: 4 
+gradient_accumulation_steps: 4
+lr: 5e-6              # 全量微调保持低学习率，非常安全
+weight_decay: 0.01
+num_epochs: 3
+ema_decay: 0.995
+seed: 42
+warmup_ratio: 0.03
+# --- Wandb Configuration ---
+project: ouro_rlp_acc_omnimath
+
+# --- Training Data Configuration ---
+apply_chat: true
+num_workers: 4
+truncation: right
+max_length_method: min
+dataset_name: OmniMathNTP
+prompt_key: prefix
+response_key: response
+train_data_path: /share/home/sxjiang/myproject/self-learn/datasets/processed/omni_math/entropy_split
+val_data_path: /share/home/sxjiang/myproject/self-learn/datasets/processed/omni_math/val.jsonl
+# --- Rollout Configuration ---
+latent_do_sample_by: noise
+num_rollouts: 8         # G: 每个上下文采样几条 latent reasoning 轨迹
+latent_noise_type: gaussian  # gaussian or dropout
+latent_noise_std: 0.1   # 高斯噪声 std
+latent_dropout: 0.1     # dropout 概率
+reward_regain: true    # 是否重新计算奖励
+
+# --- RLP & Ouro Specifics ---
+time_penalty_base: 0.02    # base思考惩罚系数
+time_penalty_scale: 0.5     # γ思考系数变化scale
+kl_coef: 0.001         # KL惩罚，防止骨干跑偏
+entropy_coef: 0.01    # 熵正则
+reward_scale: 1.0     
+
+pg_coef: 1.0          #  PG 权重
+model_coef: 1.0       #  Model Loss 
+val_check_interval: 1 # 每多少步验证一次
+log_interval: 1 # 每多少步打印一次
+num_val_samples: 200   # 论文设定的验证集大小 [cite: 6941]
+num_test_samples: 400  # 预留测试集大小
+
+gate_threshold: 0.5     # calculate_gate_stats 用的阈值
+
+rpt_ratio: 0.2 # 参考RPT取前20%
+online_entropy_threshold_mask: false # 是否在线计算熵并选择高熵Token
+
+# --- Validation Configuration ---
+val_exit_threshold: 0.5
+val_batch_size: 8
+save_interval: 1
+disable_cast: true
+resume_from_checkpoint: true

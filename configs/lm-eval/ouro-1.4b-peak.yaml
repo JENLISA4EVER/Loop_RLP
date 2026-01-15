@@ -1,0 +1,32 @@
+model: hf
+model_args:
+  pretrained: /share/home/sxjiang/model/Ouro-1.4B
+  dtype: float16
+  model_name: ouro-1.4b-peak
+  early_exit_threshold: 1.0
+  early_exit_step: null
+  no_need_keys: ["hidden_states_list", "gate_list", "add_noise_list"]
+  attn_implementation: flash_attention_2 #flash_attention_2/sdpa
+  mixed_precision_dtype: float16
+
+tasks:
+  - mmlu
+# gen_kwargs:
+#   early_exit_threshold: 0.5
+#   early_exit_step: None
+#   no_need_keys: ["hidden_states_list", "gate_list", "add_noise_list"]
+
+
+# early_exit_threshold: 0.5
+# early_exit_step: None
+# no_need_keys: ["hidden_states_list", "gate_list", "add_noise_list"]
+
+num_fewshot: 5
+batch_size: 16
+device: auto
+
+cache_requests: 
+  cache_requests: True
+apply_chat_template: true
+output_path: /share/home/sxjiang/myproject/self-learn/results/mmlu/
+log_samples: true
